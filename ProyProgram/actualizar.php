@@ -1,26 +1,35 @@
 <?php
 include 'conexion.php';
 
+$usuario = null;
+$id = null;
+
 if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     $id = $_GET['id'];
-    $query = "SELECT * FROM usuarios WHERE id = $id";
-    $resultado = $mysqli->query($query);
-    $usuario = $resultado->fetch_assoc();
+    $query = "SELECT * FROM usuarios WHERE id = $1";
+    $resultado = pg_query_params($conn, $query, array($id));
+
+    if ($resultado && pg_num_rows($resultado) > 0) {
+        $usuario = pg_fetch_assoc($resultado);
+    }
 }
 
-if (isset($_POST['nombre']) && isset($_POST['apreciacion']) && isset($_POST['cancion']) && isset($_POST['enlace'])) {
+if ($_SERVER["REQUEST_METHOD"] === "POST" &&
+    isset($_POST['nombre'], $_POST['apreciacion'], $_POST['cancion'], $_POST['enlace'])) {
+
     $nombre = $_POST['nombre'];
     $apreciacion = $_POST['apreciacion'];
     $cancion = $_POST['cancion'];
     $enlace = $_POST['enlace'];
 
-    $query = "UPDATE usuarios SET nombre='$nombre', apreciacion='$apreciacion', cancion='$cancion', enlace='$enlace' WHERE id=$id";
+    $updateQuery = "UPDATE usuarios SET nombre=$1, apreciacion=$2, cancion=$3, enlace=$4 WHERE id=$5";
+    $result = pg_query_params($conn, $updateQuery, array($nombre, $apreciacion, $cancion, $enlace, $id));
 
-    if ($mysqli->query($query)) {
-        header("Location: index.php"); // Redirigir a la página principal después de actualizar
+    if ($result) {
+        header("Location: index.php");
         exit();
     } else {
-        echo "Error al actualizar el usuario: " . $mysqli->error;
+        echo "Error al actualizar el usuario: " . pg_last_error($conn);
     }
 }
 ?>
@@ -30,7 +39,7 @@ if (isset($_POST['nombre']) && isset($_POST['apreciacion']) && isset($_POST['can
 <head>
     <meta charset="UTF-8">
     <title>Actualizar tus datos</title>
-    <link rel="stylesheet" href="estilosac.css"> <!-- Estilos externos -->
+    <link rel="stylesheet" href="estilosac.css">
 </head>
 <body>
 
@@ -38,9 +47,9 @@ if (isset($_POST['nombre']) && isset($_POST['apreciacion']) && isset($_POST['can
 
     <div class="container">
         <div class="form-container">
-            <?php if (isset($usuario)) { ?>
+            <?php if ($usuario) { ?>
                 <h3>Modificar Información</h3>
-                <form action="actualizar.php?id=<?php echo $usuario['id']; ?>" method="POST">
+                <form action="actualizar.php?id=<?php echo htmlspecialchars($usuario['id']); ?>" method="POST">
                     <label for="nombre">Nombre:</label>
                     <input type="text" name="nombre" value="<?php echo htmlspecialchars($usuario['nombre']); ?>" required>
 
@@ -62,3 +71,4 @@ if (isset($_POST['nombre']) && isset($_POST['apreciacion']) && isset($_POST['can
     </div>
 </body>
 </html>
+
