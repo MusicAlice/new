@@ -4,15 +4,16 @@ include 'conexion.php';
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $id = $_POST['id'];
 
-    $id = $mysqli->real_escape_string($id);
+    // Eliminamos usando parámetros seguros
+    $query = "DELETE FROM usuarios WHERE id = $1";
+    $result = pg_query_params($conn, $query, array($id));
 
-    $query = "DELETE FROM usuarios WHERE id = '$id'";
-
-    if ($mysqli->query($query)) {
-        header("Location: index.php"); 
+    if ($result) {
+        header("Location: index.php");
         exit();
     } else {
-        echo "Error al eliminar el usuario: " . $mysqli->error;
+        echo "Error al eliminar el usuario: " . pg_last_error($conn);
     }
 }
 ?>
+
