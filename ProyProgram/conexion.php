@@ -1,9 +1,14 @@
 <?php
-// Cambia los datos por los que tengas en tu servidor PostgreSQL
-$conn = pg_connect("host=localhost dbname=tu_base_de_datos user=tu_usuario password=tu_contraseña");
+// conexion.php
+$host = "localhost";
+$port = "5432";
+$dbname = "nombre_de_tu_base_de_datos";
+$user = "tu_usuario";
+$password = "tu_contraseña";
+
+$conn = pg_connect("host=$host port=$port dbname=$dbname user=$user password=$password");
 
 if (!$conn) {
-    die("Error de conexión a la base de datos PostgreSQL.");
+    die("Error al conectar a la base de datos PostgreSQL.");
 }
 ?>
-
