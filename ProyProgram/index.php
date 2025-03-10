@@ -1,45 +1,36 @@
 <?php
 include 'conexion.php';
 
+$search = '';
+$usuarioInsertado = false;
 
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['mortal'])) {
+// INSERTAR nuevo registro
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['mortal']) && !isset($_POST['search'])) {
     $mortal = $_POST['mortal'];
     $cancion = $_POST['cancion'];
     $enlace = $_POST['enlace'];
     $apreciacion = $_POST['apreciacion'];
 
-    // Escapar los datos para evitar inyección SQL
-    $mortal = $mysqli->real_escape_string($mortal);
-    $cancion = $mysqli->real_escape_string($cancion);
-    $enlace = $mysqli->real_escape_string($enlace);
-    $apreciacion = $mysqli->real_escape_string($apreciacion);
-
-    // Insertar el nuevo usuario
     $query_insert = "INSERT INTO usuarios (nombre, cancion, enlace, apreciacion) 
-                     VALUES ('$mortal', '$cancion', '$enlace', '$apreciacion')";
-    
-    if ($mysqli->query($query_insert)) {
-        header("Location: index.php"); // Redirigir a la misma página después de insertar
+                     VALUES ($1, $2, $3, $4)";
+    $result_insert = pg_query_params($conn, $query_insert, array($mortal, $cancion, $enlace, $apreciacion));
+
+    if ($result_insert) {
+        header("Location: index.php");
         exit();
     } else {
-        echo "Error al crear el usuario: " . $mysqli->error;
+        echo "Error al crear el usuario: " . pg_last_error($conn);
     }
 }
 
-// Verificar si se está enviando la búsqueda
-$search = '';
+// BÚSQUEDA de registros
 if (isset($_POST['search'])) {
     $search = $_POST['search'];
-}
-
-// Modificar la consulta para filtrar los resultados según la búsqueda
-$query = "SELECT * FROM usuarios WHERE nombre LIKE '%$search%' OR cancion LIKE '%$search%'";
-$resultado = $mysqli->query($query);
-
-// Obtener todos los usuarios sin filtros
-if ($search == '') {
+    $query = "SELECT * FROM usuarios WHERE nombre ILIKE $1 OR cancion ILIKE $1";
+    $resultado = pg_query_params($conn, $query, array('%' . $search . '%'));
+} else {
     $query = "SELECT * FROM usuarios";
-    $resultado = $mysqli->query($query);
+    $resultado = pg_query($conn, $query);
 }
 ?>
 
@@ -48,7 +39,6 @@ if ($search == '') {
 <head>
     <meta charset="UTF-8">
     <title>Gestión de Usuarios</title>
-    <!-- Enlazamos el archivo CSS externo -->
     <link rel="stylesheet" href="estilos.css">
 </head>
 <body>
@@ -62,7 +52,6 @@ if ($search == '') {
         </form>
     </div>
 
-    
     <div class="container">
         <div class="form-container">
             <h3>Ingrese su preferencia</h3>
@@ -97,13 +86,13 @@ if ($search == '') {
                     </tr>
                 </thead>
                 <tbody>
-                    <?php while ($row = $resultado->fetch_assoc()) { 
+                    <?php while ($row = pg_fetch_assoc($resultado)) {
                         $nombre = htmlspecialchars($row["nombre"]);
                         $cancion = htmlspecialchars($row["cancion"]);
-                        // Resaltar las coincidencias
+                        // Resaltar coincidencias si hay búsqueda
                         if ($search) {
-                            $nombre = preg_replace("/($search)/i", "<span class='highlight'>$1</span>", $nombre);
-                            $cancion = preg_replace("/($search)/i", "<span class='highlight'>$1</span>", $cancion);
+                            $nombre = preg_replace("/(" . preg_quote($search, '/') . ")/i", "<span class='highlight'>$1</span>", $nombre);
+                            $cancion = preg_replace("/(" . preg_quote($search, '/') . ")/i", "<span class='highlight'>$1</span>", $cancion);
                         }
                     ?>
                     <tr>
@@ -126,6 +115,5 @@ if ($search == '') {
             </table>
         </div>
     </div>
-
 </body>
 </html>
